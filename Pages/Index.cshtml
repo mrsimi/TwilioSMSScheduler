@@ -1,0 +1,58 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div>
+    <h5>Step -1 </h5>
+
+    @if (Model.IsConnected)
+    {
+        <p>You have connected your app to your google account. <br>
+            Click on the button below if you want to connected another google account.</p>
+    }
+    <hr>
+    <p>By clicking on the button below you are connecting your google account to this app:</p>
+    <a class="btn btn-danger" href="@ViewData["RedirectLink"]">
+        Connect your google account
+    </a>
+</div>
+
+<hr>
+<div>
+    <h5>Step - 2</h5>
+    @if (Model.IsWorkHourSet)
+    {
+        <p>You have set the work hours and days. <br>
+            You can modify the work hours and days by filling the form below</p>
+    }
+    <hr>
+
+    <p>Specify your work hours</p>
+    <form class="row g-3" method="post">
+        <div class="col-md-4">
+            <label for="openingTime" class="form-label">Opening Time</label>
+            <input type="time" class="form-control" name="OpeningTime" required>
+        </div>
+        <div class="col-md-4">
+            <label for="closingTime" class="form-label">Closing Time</label>
+            <input type="time" class="form-control" name="ClosingTime" required>
+        </div>
+        <div class="col-md-8">
+            <label>Availiable Days:</label><br>
+            @foreach (var day in Model.AllDays)
+            {
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="CheckedDays" value="@day">
+                    <label class="form-check-label">@day</label>
+                </div>
+            }
+        </div>
+        <button class="btn btn-danger col-md-8" type="submit">
+            Confirm
+        </button>
+    </form>
+
+
+</div>
