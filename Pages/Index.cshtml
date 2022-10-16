@@ -9,8 +9,10 @@
 
     @if (Model.IsConnected)
     {
-        <p>You have connected your app to your google account. <br>
-            Click on the button below if you want to connected another google account.</p>
+        <div class="alert alert-secondary">
+            <p>You have connected your app to your google account. <br>
+                Click on the button below if you want to connected another google account.</p>
+        </div>
     }
     <hr>
     <p>By clicking on the button below you are connecting your google account to this app:</p>
@@ -24,8 +26,10 @@
     <h5>Step - 2</h5>
     @if (Model.IsWorkHourSet)
     {
-        <p>You have set the work hours and days. <br>
-            You can modify the work hours and days by filling the form below</p>
+        <div class="alert alert-secondary">
+            <p>You have set the work hours and days. <br>
+                You can modify the work hours and days by filling the form below</p>
+        </div>
     }
     <hr>
 

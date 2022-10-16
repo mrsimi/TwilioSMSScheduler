@@ -1,8 +1,8 @@
 {
   "OpeningTime": "08:00",
-  "ClosingTime": "05:00",
+  "ClosingTime": "17:00",
   "CheckedDays": "Monday,Tuesday,Wednesday,Thursday,Friday",
-  "AccessToken": "ya29.a0Aa4xrXP7Vo0mszX5rBSbLS_1Rkv4wvT-hH09UglLqSBO3IUxTrwREbQLKGs6k1wEFzim_KuDpodDimE57NVGDfLTA5rtyBcGyPpLfxWEiS2x8vZSh0eMCGKBzMycgStGJOK3YHlOI8W9YzUBxuXuGOjMrP_6aCgYKATASARASFQEjDvL9Wv-YDeJDphH9aSJU2nUlkw0163",
+  "AccessToken": "ya29.a0Aa4xrXNwGTyIjBjXyaq_IaYTZ4RQ2qfwxcnBwOiDId76ef1XwQbhb3IrPIQrj6qEhFAzDj1_wppunJcJHx6SWo8wlXNwDa19pS2cYZpOGFmEkaCj4wZlc7z8kScNDy2RadSPFfMvV27S-nZjmOa7Ftw3JqhYygaCgYKATASARESFQEjDvL9ZJdzTpPZM0XaWm1kLluSXw0165",
   "RefreshToken": "YylaD7SnSbceqTLq9aFj/vVc07Cmo9LvOxEkvhgRx8d0s3DOIU3ZFgDStxmhSzLAdBigsLbSQKIcYtwz1QJLtPaH/auCO5QIdc35IYZMt0S8slqCvdXNzFtYO7P63zVmcS8jauovw7aXrbXDTlk/lg==",
-  "ExpiryDateTime": "15/10/2022 08:45:12"
+  "ExpiryDateTime": "17/10/2022 00:52:30"
 }

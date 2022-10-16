@@ -9,7 +9,7 @@ public class IndexModel : PageModel
     private readonly ILogger<IndexModel> _logger;
     private readonly IConfiguration _configuration;
     private string clientId, redirectUrl, scope, authBaseUrl, clientSecret, requestTokenBaseUrl = string.Empty;
-
+    
     public IndexModel(ILogger<IndexModel> logger, IConfiguration configuration)
     {
         _logger = logger;
@@ -32,8 +32,8 @@ public class IndexModel : PageModel
             "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
     };
 
-    public bool IsConnected {get; set;} =  AppConfig.IsConnectedToGoogle();
-    public bool IsWorkHourSet {get; set;} =  AppConfig.IsWorkHoursSet();
+    public bool IsConnected {get; set;} =  !string.IsNullOrEmpty(AppConfig.GetUserConfig().RefreshToken);
+    public bool IsWorkHourSet {get; set;} = !string.IsNullOrEmpty(AppConfig.GetUserConfig().OpeningTime); 
 
     public async Task OnGet(string code)
     {
