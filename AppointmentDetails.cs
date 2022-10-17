@@ -48,7 +48,7 @@ namespace TwilioSMSScheduler
             appointmentTime = appointmentTime.Replace("PM","-PM").Replace(" ", "");;
             appointmentTime = appointmentTime.Replace("NOON", "-PM");
             
-            string resultAppointmentTime = $"{DateTime.Now.Year}-{monthNumber.ToString().PadLeft(2, '0')}-{appointmentDay.PadLeft(2, '0')} {appointmentTime}";
+            string resultAppointmentTime = $"{DateTime.Now.Year}-{monthNumber.ToString().PadLeft(2, '0')}-{appointmentDay.PadLeft(2, '0')} {appointmentTime.PadLeft(5, '0')}";
 
             var date = DateTime.ParseExact(resultAppointmentTime, "yyyy-MM-dd hh-tt", 
                                   CultureInfo.InvariantCulture);

@@ -32,14 +32,20 @@ namespace TwilioSMSScheduler.APIs
         [HttpPost]
         public async Task<IActionResult> IncomingMsgTrigger()
         {
-            string smsBody = Request.Form["Body"];
+           try
+           {
+             string smsBody = Request.Form["Body"];
             string smsFrom = Request.Form["From"];
+
+            _logger.LogInformation($"message sent {JsonConvert.SerializeObject(Request.Form)}");
 
             string accessToken = "";
             var appConfigDetails = AppConfig.GetUserConfig();
 
             //EXTRACT APPOINTMENT
             AppointmentDetails appointmentDetails = new AppointmentDetails(smsBody,"UTC+1", smsFrom);
+
+            _logger.LogInformation($"Appointment details {JsonConvert.SerializeObject(appointmentDetails)}");
 
             //CHECK DAYS AND TIME. 
             var DateTimeOpen = DateTime.ParseExact(appConfigDetails.OpeningTime, "HH:mm", CultureInfo.InvariantCulture);
@@ -71,6 +77,8 @@ namespace TwilioSMSScheduler.APIs
                 string decryptedRefreshToken = AesOperation.DecryptString(_configuration["ConfigEncryptKey"], appConfigDetails.RefreshToken);
                 string refreshTokenUrl = $"{requestTokenBaseUrl}?client_id={clientId}&client_secret={clientSecret}&grant_type=refresh_token&refresh_token={decryptedRefreshToken}";
                 var response = await httpClient.PostAsync(refreshTokenUrl, null);
+
+                _logger.LogInformation($"Request Token {await response.Content.ReadAsStringAsync()}");
 
                 if(response.IsSuccessStatusCode)
                 {
@@ -113,14 +121,17 @@ namespace TwilioSMSScheduler.APIs
 
              //CHECK IF NO EVENT EXIST IN THAT DATE AND TIME
             var allEvents = await httpClient.GetAsync(calendarUrl);
+            _logger.LogInformation($"Get all Events {JsonConvert.SerializeObject(await allEvents.Content.ReadAsStringAsync())}");
             if(allEvents.IsSuccessStatusCode)
             {
                 var allEventsResponse = await allEvents.Content.ReadAsStringAsync();
+                
                 var deserializedEvents = JsonConvert.DeserializeObject<CalendarResponse>(allEventsResponse);
 
                 if(deserializedEvents.items.Any(m => m.start.dateTime == appointmentDetails.start.dateTime 
                     && m.end.dateTime == appointmentDetails.end.dateTime))
                 {
+                    _logger.LogInformation("Appointment conflict");
                     var result = new MessagingResponse();
                     result.Message("There is already an appointment for this time slot. Kindly select another time.");
                     return new TwiMLResult(result);
@@ -136,8 +147,11 @@ namespace TwilioSMSScheduler.APIs
 
             var createCalendarResponse = await httpClient.PostAsync(calendarUrl, requestBody);
 
+            _logger.LogInformation($"Create an Event {JsonConvert.SerializeObject(createCalendarResponse)}");
+
             if (createCalendarResponse.IsSuccessStatusCode)
             {
+                _logger.LogInformation("Appointment made");
                 var result = new MessagingResponse();
                 result.Message($"An appointment has been created for you. We expect to see you soon on {appointmentDetails.start.dateTime}");
                 return new TwiMLResult(result);
@@ -149,6 +163,14 @@ namespace TwilioSMSScheduler.APIs
                 result.Message($"An Error occured while try to create an appointment for you. Kindly try agian later");
                 return new TwiMLResult(result);
             }
+           }
+           catch (System.Exception ex)
+           {
+                _logger.LogInformation($"Request failed with error {ex}");
+                var result = new MessagingResponse();
+                result.Message($"An Error occured while try to create an appointment for you. Kindly try agian later");
+                return new TwiMLResult(result);
+           }
         }
     }
 }
