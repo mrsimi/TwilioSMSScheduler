@@ -31,7 +31,7 @@ public class IndexModel : PageModel
 
     [BindProperty] public List<string> CheckedDays { get; set; }
 
-    public string[] AllDays { get; set; } =
+    public string[] AllDays { get; } =
     {
         "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
     };

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net.Http.Headers;
+using System.Xml;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Twilio.AspNet.Core;
@@ -34,7 +35,9 @@ public class WebhookController : ControllerBase
         var userCalendarConfig = UserCalendarConfiguration.Instance;
 
         // Extract appointment
-        var appointmentDetails = AppointmentDetails.Extract(messageBody, "UTC+1", messageFrom);
+        var utcOffset = TimeZoneInfo.Local.BaseUtcOffset;
+        var timeZone = "UTC" + (utcOffset > TimeSpan.Zero ? "+" : "-") + utcOffset.ToString(@"h\:mm");
+        var appointmentDetails = AppointmentDetailsExtractor.Extract(messageBody, timeZone, messageFrom);
 
         // Check days and time 
         var dateTimeOpen = DateTime.ParseExact(userCalendarConfig.OpeningTime, "HH:mm", CultureInfo.InvariantCulture);
@@ -53,8 +56,7 @@ public class WebhookController : ControllerBase
               appointmentDetails.End.DateTime.TimeOfDay <= dateTimeClose.TimeOfDay))
         {
             return new MessagingResponse()
-                .Message(
-                    $"Business only takes appointment between {dateTimeOpen.TimeOfDay} and {dateTimeClose.TimeOfDay}")
+                .Message($"Business only takes appointment between {dateTimeOpen.TimeOfDay} and {dateTimeClose.TimeOfDay}")
                 .ToTwiMLResult();
         }
 
@@ -66,21 +68,26 @@ public class WebhookController : ControllerBase
             new AuthenticationHeaderValue("Bearer", accessToken);
 
         // Check if no event exist in that date and time
-        var allEventsResponse = await httpClient.GetAsync(calendarUrl);
-        var allEventsBody = await allEventsResponse.Content.ReadAsStringAsync();
-        if (!allEventsResponse.IsSuccessStatusCode)
+        var appointmentDate = appointmentDetails.Start.DateTime.Date;
+        var eventsForDayUrl = calendarUrl +
+                              $"?timeMin={XmlConvert.ToString(appointmentDate, XmlDateTimeSerializationMode.Utc)}" +
+                              $"&timeMax={XmlConvert.ToString(appointmentDate.AddDays(1).AddTicks(-1), XmlDateTimeSerializationMode.Utc)}";
+        var eventsResponse = await httpClient.GetAsync(eventsForDayUrl);
+        var eventsBody = await eventsResponse.Content.ReadAsStringAsync();
+        if (!eventsResponse.IsSuccessStatusCode)
         {
-            logger.LogError("Failed to get all events: {AllEventsResponseBody}", allEventsBody);
+            logger.LogError("Failed to get all events: {EventsResponseBody}", eventsBody);
             return new MessagingResponse()
                 .Message("An Error occured while try to create an appointment for you. Kindly try again later.")
                 .ToTwiMLResult();
         }
 
-        var deserializedEvents = JsonConvert.DeserializeObject<CalendarResponse>(allEventsBody);
+        var deserializedEvents = JsonConvert.DeserializeObject<CalendarResponse>(eventsBody);
         if (deserializedEvents.Items
             .Where(m => m.Start != null && m.End != null)
-            .Any(m => m.Start.DateTime == appointmentDetails.Start.DateTime
-                      && m.End.DateTime == appointmentDetails.End.DateTime))
+            // Check for exact matches or overlapping matches
+            .Any(m => m.Start.DateTime < appointmentDetails.End.DateTime
+                       && m.End.DateTime > appointmentDetails.Start.DateTime))
         {
             return new MessagingResponse()
                 .Message("There is already an appointment for this time slot. Kindly select another time.")
@@ -99,8 +106,7 @@ public class WebhookController : ControllerBase
         }
 
         return new MessagingResponse()
-            .Message(
-                $"An appointment has been created for you. We expect to see you soon on {appointmentDetails.Start.DateTime}")
+            .Message($"An appointment has been created for you. We expect to see you soon on {appointmentDetails.Start.DateTime}")
             .ToTwiMLResult();
     }
 
