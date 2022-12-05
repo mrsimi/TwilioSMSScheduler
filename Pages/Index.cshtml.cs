@@ -1,100 +1,87 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
-namespace TwilioSMSScheduler.Pages;
+namespace TwilioSmsScheduler.Pages;
 
 public class IndexModel : PageModel
 {
-    private readonly ILogger<IndexModel> _logger;
-    private readonly IConfiguration _configuration;
-    private string clientId, redirectUrl, scope, authBaseUrl, clientSecret, requestTokenBaseUrl = string.Empty;
-    
-    public IndexModel(ILogger<IndexModel> logger, IConfiguration configuration)
-    {
-        _logger = logger;
-        _configuration = configuration;
+    private readonly ILogger<IndexModel> logger;
+    private readonly IConfiguration configuration;
+    private readonly HttpClient httpClient;
+    private readonly string clientId, redirectUrl, scope, authBaseUrl, clientSecret, requestTokenBaseUrl;
+    private readonly UserCalendarConfiguration userCalendarConfig;
 
-        authBaseUrl = _configuration["GoogleAPI:AuthBaseUrl"];
-        clientId = _configuration["GoogleAPI:ClientID"];
-        redirectUrl = _configuration["GoogleAPI:RedirectUrl"];
-        scope = _configuration["GoogleAPI:Scope"];
-        clientSecret = _configuration["GoogleAPI:Secrets"];
-        requestTokenBaseUrl = _configuration["GoogleAPI:RequestTokenUrl"];
+    public IndexModel(ILogger<IndexModel> logger, IConfiguration configuration, HttpClient httpClient)
+    {
+        this.logger = logger;
+        this.configuration = configuration;
+        this.httpClient = httpClient;
+
+        authBaseUrl = this.configuration["GoogleApi:AuthBaseUrl"];
+        clientId = this.configuration["GoogleApi:ClientID"];
+        redirectUrl = this.configuration["GoogleApi:RedirectUrl"];
+        scope = this.configuration["GoogleApi:Scope"];
+        clientSecret = this.configuration["GoogleApi:Secret"];
+        requestTokenBaseUrl = this.configuration["GoogleApi:RequestTokenUrl"];
+        userCalendarConfig = UserCalendarConfiguration.Instance;
+        IsConnected = !string.IsNullOrEmpty(userCalendarConfig.RefreshToken);
+        IsWorkHourSet = !string.IsNullOrEmpty(userCalendarConfig.OpeningTime);
     }
 
-    [BindProperty]
-    public List<string> CheckedDays {get; set;}
+    [BindProperty] public List<string> CheckedDays { get; set; }
 
-    [BindProperty]
-    public List<string> AllDays {get; set;} = new List<string>
+    public string[] AllDays { get; } =
     {
-            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
     };
 
-    public bool IsConnected {get; set;} =  !string.IsNullOrEmpty(AppConfig.GetUserConfig().RefreshToken);
-    public bool IsWorkHourSet {get; set;} = !string.IsNullOrEmpty(AppConfig.GetUserConfig().OpeningTime); 
+    public bool IsConnected { get; set; }
+    public bool IsWorkHourSet { get; set; }
+    public string RedirectLink { get; set; }
 
     public async Task OnGet(string code)
     {
-        if (string.IsNullOrEmpty(code))
-        {
-            string redirectLink = $"{authBaseUrl}?client_id={clientId}&redirect_uri={redirectUrl}&response_type=code&scope={scope}&access_type=offline";
-            redirectLink = $"{authBaseUrl}?client_id={clientId}&" +
-           $"redirect_uri={redirectUrl}&response_type=code&scope={scope}&access_type=offline";
+        RedirectLink = authBaseUrl +
+                       $"?client_id={clientId}&" +
+                       $"redirect_uri={redirectUrl}" +
+                       "&response_type=code" +
+                       $"&scope={scope}" +
+                       "&access_type=offline";
 
-            ViewData["RedirectLink"] = redirectLink;
+        if (code == null) return;
+        
+        var requestTokenUrl = requestTokenBaseUrl +
+                              $"?client_id={clientId}" +
+                              $"&client_secret={clientSecret}" +
+                              $"&code={code}" +
+                              "&grant_type=authorization_code" +
+                              $"&redirect_uri={redirectUrl}";
+
+        var response = await httpClient.PostAsync(requestTokenUrl, null);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return;
         }
 
-        else
-        {
-            string requestTokenUrl = $"{requestTokenBaseUrl}?client_id={clientId}&client_secret={clientSecret}&code={code}&grant_type=authorization_code&redirect_uri={redirectUrl}";
-           
-            var httpClient = new HttpClient();
-            
-            var response = await httpClient.PostAsync(requestTokenUrl, null);
-           
+        var content = await response.Content.ReadAsStringAsync();
+        dynamic jsonObj = JsonConvert.DeserializeObject(content);
 
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(content);
+        userCalendarConfig.AccessToken = jsonObj["access_token"];
+        userCalendarConfig.RefreshToken = jsonObj["refresh_token"];
+        userCalendarConfig.ExpiryDateTime = DateTime.Now.AddSeconds(int.Parse((string) jsonObj["expires_in"]));
 
-                string expireSecondsContent = jsonObj["expires_in"];
-                string accesTokenContent = jsonObj["access_token"];
-                string refreshTokenContent = jsonObj["refresh_token"];
-
-                int expirySeconds;
-                int.TryParse(expireSecondsContent, out expirySeconds);
-
-                
-                Dictionary<string, string> configValues = new Dictionary<string, string>();
-                configValues.Add("AccessToken", accesTokenContent);
-                configValues.Add("RefreshToken", AesOperation.EncryptString(_configuration["ConfigEncryptKey"], refreshTokenContent));
-                configValues.Add("ExpiryDateTime", DateTime.Now.AddSeconds(expirySeconds).ToString());
-                
-                AppConfig.ModifyUserConfig(configValues);
-
-                IsConnected = true;
-            }
-            
-
-            Redirect("/");
-        }
+        IsConnected = true;
     }
 
-    public void OnPost()
+    public async Task OnPost()
     {
-        Dictionary<string, string> formValues = new Dictionary<string, string>();
+        var form = await Request.ReadFormAsync();
+        userCalendarConfig.OpeningTime = form["OpeningTime"];
+        userCalendarConfig.ClosingTime = form["ClosingTime"];
+        userCalendarConfig.CheckedDays = string.Join(",", form["CheckedDays"]);
 
-        var form = Request.Form;
-        formValues.Add("OpeningTime", form["OpeningTime"]);
-        formValues.Add("ClosingTime", form["ClosingTime"]);
-        formValues.Add("CheckedDays", string.Join(",", form["CheckedDays"]));
-
-        AppConfig.ModifyUserConfig(formValues);
         IsWorkHourSet = true;
     }
-
-    
 }

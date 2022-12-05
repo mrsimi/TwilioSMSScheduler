@@ -5,19 +5,21 @@
 }
 
 <div>
-    <h5>Step -1 </h5>
+    <h5>Step - 1</h5>
 
     @if (Model.IsConnected)
     {
         <div class="alert alert-secondary">
-            <p>You have connected your app to your google account. <br>
-                Click on the button below if you want to connected another google account.</p>
+            <p>
+                You have connected your app to your google account. <br>
+                Click on the button below if you want to connected another google account.
+            </p>
         </div>
     }
     <hr>
     <p>By clicking on the button below you are connecting your google account to this app:</p>
-    <a class="btn btn-danger" href="@ViewData["RedirectLink"]">
-        Connect your google account
+    <a class="btn btn-danger" href="@Model.RedirectLink">
+        Connect your Google account
     </a>
 </div>
 
@@ -27,8 +29,10 @@
     @if (Model.IsWorkHourSet)
     {
         <div class="alert alert-secondary">
-            <p>You have set the work hours and days. <br>
-                You can modify the work hours and days by filling the form below</p>
+            <p>
+                You have set the work hours and days. <br>
+                You can modify the work hours and days by filling the form below.
+            </p>
         </div>
     }
     <hr>
@@ -36,20 +40,20 @@
     <p>Specify your work hours</p>
     <form class="row g-3" method="post">
         <div class="col-md-4">
-            <label for="openingTime" class="form-label">Opening Time</label>
-            <input type="time" class="form-control" name="OpeningTime" required>
+            <label for="opening-time" class="form-label">Opening Time</label>
+            <input type="time" class="form-control" name="OpeningTime" id="opening-time" required>
         </div>
         <div class="col-md-4">
-            <label for="closingTime" class="form-label">Closing Time</label>
-            <input type="time" class="form-control" name="ClosingTime" required>
+            <label for="closing-time" class="form-label">Closing Time</label>
+            <input type="time" class="form-control" name="ClosingTime" id="closing-time" required>
         </div>
         <div class="col-md-8">
             <label>Availiable Days:</label><br>
             @foreach (var day in Model.AllDays)
             {
                 <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="CheckedDays" value="@day">
-                    <label class="form-check-label">@day</label>
+                    <input class="form-check-input" type="checkbox" name="CheckedDays" id="checked-day-@day" value="@day">
+                    <label class="form-check-label" for="checked-day-@day">@day</label>
                 </div>
             }
         </div>
@@ -57,6 +61,4 @@
             Confirm
         </button>
     </form>
-
-
 </div>
