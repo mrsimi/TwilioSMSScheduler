@@ -10,7 +10,7 @@ public class IndexModel : PageModel
     private readonly IConfiguration configuration;
     private readonly HttpClient httpClient;
     private readonly string clientId, redirectUrl, scope, authBaseUrl, clientSecret, requestTokenBaseUrl;
-    private readonly UserCalendarConfiguration userCalendarConfig;
+    private readonly UserConfiguration userConfiguration;
 
     public IndexModel(ILogger<IndexModel> logger, IConfiguration configuration, HttpClient httpClient)
     {
@@ -24,9 +24,9 @@ public class IndexModel : PageModel
         scope = this.configuration["GoogleApi:Scope"];
         clientSecret = this.configuration["GoogleApi:Secret"];
         requestTokenBaseUrl = this.configuration["GoogleApi:RequestTokenUrl"];
-        userCalendarConfig = UserCalendarConfiguration.Instance;
-        IsConnected = !string.IsNullOrEmpty(userCalendarConfig.RefreshToken);
-        IsWorkHourSet = !string.IsNullOrEmpty(userCalendarConfig.OpeningTime);
+        userConfiguration = UserConfiguration.Instance;
+        IsConnected = !string.IsNullOrEmpty(userConfiguration.RefreshToken);
+        IsWorkHourSet = !string.IsNullOrEmpty(userConfiguration.OpeningTime);
     }
 
     [BindProperty] public List<string> CheckedDays { get; set; }
@@ -42,6 +42,7 @@ public class IndexModel : PageModel
 
     public async Task OnGet(string code)
     {
+        
         RedirectLink = authBaseUrl +
                        $"?client_id={clientId}&" +
                        $"redirect_uri={redirectUrl}" +
@@ -68,9 +69,9 @@ public class IndexModel : PageModel
         var content = await response.Content.ReadAsStringAsync();
         dynamic jsonObj = JsonConvert.DeserializeObject(content);
 
-        userCalendarConfig.AccessToken = jsonObj["access_token"];
-        userCalendarConfig.RefreshToken = jsonObj["refresh_token"];
-        userCalendarConfig.ExpiryDateTime = DateTime.Now.AddSeconds(int.Parse((string) jsonObj["expires_in"]));
+        userConfiguration.AccessToken = jsonObj["access_token"];
+        userConfiguration.RefreshToken = jsonObj["refresh_token"];
+        userConfiguration.ExpiryDateTime = DateTime.Now.AddSeconds(int.Parse((string) jsonObj["expires_in"]));
 
         IsConnected = true;
     }
@@ -78,9 +79,9 @@ public class IndexModel : PageModel
     public async Task OnPost()
     {
         var form = await Request.ReadFormAsync();
-        userCalendarConfig.OpeningTime = form["OpeningTime"];
-        userCalendarConfig.ClosingTime = form["ClosingTime"];
-        userCalendarConfig.CheckedDays = string.Join(",", form["CheckedDays"]);
+        userConfiguration.OpeningTime = form["OpeningTime"];
+        userConfiguration.ClosingTime = form["ClosingTime"];
+        userConfiguration.CheckedDays = string.Join(",", form["CheckedDays"]);
 
         IsWorkHourSet = true;
     }

@@ -1,4 +1,4 @@
-using System.Globalization;
+  using System.Globalization;
 using System.Net.Http.Headers;
 using System.Xml;
 using Microsoft.AspNetCore.Mvc;
@@ -10,13 +10,13 @@ namespace TwilioSmsScheduler.Api;
 
 [ApiController]
 [Route("api/[controller]")]
-public class WebhookController : ControllerBase
+public class WebhookkController : ControllerBase
 {
-    private readonly ILogger<WebhookController> logger;
+    private readonly ILogger<WebhookkController> logger;
     private readonly HttpClient httpClient;
     private readonly string clientId, clientSecret, requestTokenBaseUrl, calendarUrl;
 
-    public WebhookController(IConfiguration configuration, ILogger<WebhookController> logger, HttpClient httpClient)
+    public WebhookkController(IConfiguration configuration, ILogger<WebhookkController> logger, HttpClient httpClient)
     {
         this.logger = logger;
         this.httpClient = httpClient;
@@ -32,14 +32,15 @@ public class WebhookController : ControllerBase
         string messageBody = Request.Form["Body"];
         string messageFrom = Request.Form["From"];
 
-        var userCalendarConfig = UserConfiguration.Instance;
-
+var userCalendarConfig = UserConfiguration.Instance;
+	
         // Extract appointment
         var utcOffset = TimeZoneInfo.Local.BaseUtcOffset;
         var timeZone = "UTC" + (utcOffset > TimeSpan.Zero ? "+" : "-") + utcOffset.ToString(@"h\:mm");
-        var appointmentDetails = AppointmentDetailsExtractor.Extract(messageBody, timeZone, messageFrom);
+       
+     var appointmentDetails = AppointmentDetailsExtractor.Extract(messageBody, timeZone, messageFrom);
 
-        // Check days and time 
+ // Check days and time 
         var dateTimeOpen = DateTime.ParseExact(userCalendarConfig.OpeningTime, "HH:mm", CultureInfo.InvariantCulture);
         var dateTimeClose = DateTime.ParseExact(userCalendarConfig.ClosingTime, "HH:mm", CultureInfo.InvariantCulture);
 
@@ -60,14 +61,14 @@ public class WebhookController : ControllerBase
                 .ToTwiMLResult();
         }
 
-        var accessToken = await GetAccessToken(userCalendarConfig);
+var accessToken = await GetAccessToken(userCalendarConfig);
 
         // Insert event into the Google Calendar
         var requestBody = new StringContent(JsonConvert.SerializeObject(appointmentDetails));
         httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", accessToken);
 
-        // Check if no event exist in that date and time
+         // Check if no event exist in that date and time
         var appointmentDate = appointmentDetails.Start.DateTime.Date;
         var eventsForDayUrl = calendarUrl +
                               $"?timeMin={XmlConvert.ToString(appointmentDate, XmlDateTimeSerializationMode.Utc)}" +
@@ -94,6 +95,9 @@ public class WebhookController : ControllerBase
                 .ToTwiMLResult();
         }
 
+
+
+        // Check if no event exist in that date and time
         var createCalendarResponse = await httpClient.PostAsync(calendarUrl, requestBody);
         var createCalendarBody = await createCalendarResponse.Content.ReadAsStringAsync();
 
@@ -110,12 +114,12 @@ public class WebhookController : ControllerBase
             .ToTwiMLResult();
     }
 
-    private async Task<string> GetAccessToken(UserConfiguration userCalendarConfig)
+private async Task<string> GetAccessToken(UserConfiguration userConfiguration)
     {
         // Use existing token if not expired
-        if (DateTime.Now <= userCalendarConfig.ExpiryDateTime)
+        if (DateTime.Now <= userConfiguration.ExpiryDateTime)
         {
-            return userCalendarConfig.AccessToken;
+            return userConfiguration.AccessToken;
         }
 
         // Get new token if expired
@@ -123,7 +127,7 @@ public class WebhookController : ControllerBase
                               $"?client_id={clientId}" +
                               $"&client_secret={clientSecret}" +
                               "&grant_type=refresh_token" +
-                              $"&refresh_token={userCalendarConfig.RefreshToken}";
+                              $"&refresh_token={userConfiguration.RefreshToken}";
 
         var response = await httpClient.PostAsync(refreshTokenUrl, null);
 
@@ -138,9 +142,9 @@ public class WebhookController : ControllerBase
         dynamic jsonObj = JsonConvert.DeserializeObject(content);
 
         var expirySeconds = int.Parse(jsonObj["expires_in"]);
-        userCalendarConfig.ExpiryDateTime = DateTime.Now.AddSeconds(expirySeconds);
+        userConfiguration.ExpiryDateTime = DateTime.Now.AddSeconds(expirySeconds);
 
-        userCalendarConfig.AccessToken = jsonObj["access_token"];
-        return userCalendarConfig.AccessToken;
+        userConfiguration.AccessToken = jsonObj["access_token"];
+        return userConfiguration.AccessToken;
     }
 }

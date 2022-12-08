@@ -1,8 +1,8 @@
 namespace TwilioSmsScheduler;
 
-public class UserCalendarConfiguration
+public class UserConfiguration
 {
-    public static UserCalendarConfiguration Instance { get; } = new();
+    public static UserConfiguration Instance { get; } = new();
 
     public string OpeningTime { get; set; }
     public string ClosingTime { get; set; }
